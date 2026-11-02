@@ -11,10 +11,27 @@ if(!ac||ac==='change-me'||ac.length<8){console.error('\nНе задан код �
 cfg.adminCode=ac;
 const Q=JSON.parse(fs.readFileSync(path.join(ROOT,'questions.json'),'utf8'));
 const DBF=path.join(DATA,'db.json');let db={codes:[],subs:[]};
-try{db=JSON.parse(fs.readFileSync(DBF,'utf8'))}catch(e){}
-db.codes=db.codes||[];db.subs=db.subs||[];
-let timer=null;const flush=()=>{clearTimeout(timer);timer=null;const t=DBF+'.tmp';fs.writeFileSync(t,JSON.stringify(db));fs.renameSync(t,DBF)};
-const save=()=>{if(!timer)timer=setTimeout(flush,150)};process.on('SIGINT',()=>{flush();process.exit()});process.on('SIGTERM',()=>{flush();process.exit()});
+// Хранилище: если заданы UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN — данные лежат в бесплатной базе Upstash,
+// иначе — в файлах папки data (удобно для запуска на своём компьютере).
+const REST=process.env.UPSTASH_REDIS_REST_URL,TKN=process.env.UPSTASH_REDIS_REST_TOKEN;
+const rc=async cmds=>{const r=await fetch(REST.replace(/\/$/,'')+'/pipeline',{method:'POST',headers:{Authorization:'Bearer '+TKN,'Content-Type':'application/json'},body:JSON.stringify(cmds)});if(!r.ok)throw new Error('Upstash: HTTP '+r.status);const j=await r.json();j.forEach(x=>{if(x.error)throw new Error('Upstash: '+x.error)});return j.map(x=>x.result)};
+const lastSubs=new Map();let lastCodes='';
+async function boot(){
+ if(REST){const [c,ids]=await rc([['GET','hrpm:codes'],['SMEMBERS','hrpm:subs']]);db.codes=c?JSON.parse(c):[];lastCodes=c||'';
+  if(ids&&ids.length){const vals=await rc(ids.map(i=>['GET','hrpm:sub:'+i]));db.subs=vals.filter(Boolean).map(v=>{lastSubs.set(JSON.parse(v).id,v);return JSON.parse(v)})}}
+ else{try{db=JSON.parse(fs.readFileSync(DBF,'utf8'))}catch(e){}}
+ db.codes=db.codes||[];db.subs=db.subs||[]}
+async function doFlush(){
+ if(!REST){const t=DBF+'.tmp';fs.writeFileSync(t,JSON.stringify(db));fs.renameSync(t,DBF);return}
+ const cmds=[],upd=[];const cj=JSON.stringify(db.codes);if(cj!==lastCodes)cmds.push(['SET','hrpm:codes',cj]);
+ for(const s of db.subs){const j=JSON.stringify(s);if(lastSubs.get(s.id)!==j){cmds.push(['SET','hrpm:sub:'+s.id,j],['SADD','hrpm:subs',s.id]);upd.push([s.id,j])}}
+ if(!cmds.length)return;await rc(cmds);lastCodes=cj;upd.forEach(([id,j])=>lastSubs.set(id,j))}
+let chain=Promise.resolve(),timer=null;
+const flush=()=>chain=chain.then(doFlush).catch(e=>{console.error('Ошибка сохранения:',e.message);setTimeout(save,3000)});
+const save=()=>{if(!timer)timer=setTimeout(()=>{timer=null;flush()},150)};
+const bye=()=>{flush().finally(()=>process.exit())};process.on('SIGINT',bye);process.on('SIGTERM',bye);
+const putPhoto=async(id,dataUrl)=>{if(REST)await rc([['SET','hrpm:photo:'+id,dataUrl]]);else fs.writeFileSync(path.join(PHOTOS,id+'.jpg'),Buffer.from(dataUrl.split(',')[1],'base64'))};
+const getPhoto=async id=>{if(REST){const [v]=await rc([['GET','hrpm:photo:'+id]]);return v?Buffer.from(v.split(',')[1],'base64'):null}const f=path.join(PHOTOS,id+'.jpg');return fs.existsSync(f)?fs.readFileSync(f):null};
 const norm=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
 const rid=()=>crypto.randomBytes(16).toString('hex');
 const AL='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*?+=';
@@ -35,7 +52,7 @@ const body=req=>new Promise((ok,no)=>{let b='',n=0;req.on('data',c=>{n+=c.length
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.ico':'image/x-icon','.svg':'image/svg+xml'};
 async function api(req,res,u){const p=u.pathname.slice(5);
  if(req.method==='GET'&&p==='state'){const s=db.subs.find(x=>x.id===u.searchParams.get('token'));return s?send(res,200,stateOf(s)):send(res,404,{error:'Сессия не найдена'})}
- if(req.method==='GET'&&p.startsWith('admin/photo/')){if(!isAdmin(req,u))return send(res,401,{error:'Нет доступа'});const id=p.slice(12).replace(/[^a-f0-9]/g,''),f=path.join(PHOTOS,id+'.jpg');if(!fs.existsSync(f))return send(res,404,{error:'Нет фото'});res.writeHead(200,{'Content-Type':'image/jpeg'});return fs.createReadStream(f).pipe(res)}
+ if(req.method==='GET'&&p.startsWith('admin/photo/')){if(!isAdmin(req,u))return send(res,401,{error:'Нет доступа'});const id=p.slice(12).replace(/[^a-f0-9]/g,''),buf=await getPhoto(id);if(!buf)return send(res,404,{error:'Нет фото'});res.writeHead(200,{'Content-Type':'image/jpeg'});return res.end(buf)}
  if(req.method==='GET'&&p==='admin/data'){if(!isAdmin(req,u))return send(res,401,{error:'Нет доступа'});db.subs.forEach(expire);
   return send(res,200,{codes:db.codes.map(c=>({id:c.id,n:c.n,nick:c.nick,code:c.code,used:!!c.used,usedAt:c.usedAt})),subs:db.subs.map(s=>({id:s.id,n:s.n,nick:s.nick,status:s.status,started:s.started,finished:s.finished,answers:s.answers,skipped:s.skipped,grades:s.grades,qs:s.qs.map(i=>Q[i])})).sort((a,b)=>b.started-a.started)})}
  if(req.method!=='POST')return send(res,404,{error:'Не найдено'});
@@ -46,7 +63,7 @@ async function api(req,res,u){const p=u.pathname.slice(5);
   const c=db.codes.find(x=>x.norm===norm(nick)&&x.code===code);if(!c)return send(res,400,{error:'Код недействителен для этого никнейма.'});
   if(c.used)return send(res,400,{error:'Код уже был использован и больше недействителен.'});
   const id=rid();c.used=true;c.usedAt=Date.now();
-  try{fs.writeFileSync(path.join(PHOTOS,id+'.jpg'),Buffer.from(photo.split(',')[1],'base64'))}catch(e){c.used=false;delete c.usedAt;return send(res,500,{error:'Не удалось сохранить фото.'})}
+  try{await putPhoto(id,photo)}catch(e){c.used=false;delete c.usedAt;return send(res,500,{error:'Не удалось сохранить фото.'})}
   const now=Date.now(),s={id,n:c.n,codeId:c.id,nick,norm:norm(nick),status:'in_progress',started:now,deadline:now+TL,qs:c.qs,i:0,answers:{},skipped:[],grades:{}};db.subs.push(s);save();return send(res,200,stateOf(s))}
  if(p==='answer'||p==='finish'){const s=db.subs.find(x=>x.id===b.token);if(!s)return send(res,404,{error:'Сессия не найдена'});expire(s);
   if(s.status==='in_progress'){const t=String(b.text||'').trim().slice(0,6000);
@@ -65,8 +82,9 @@ async function api(req,res,u){const p=u.pathname.slice(5);
  if(p==='admin/code-delete'){db.codes=db.codes.filter(c=>c.id!==b.id);save();return send(res,200,{ok:1})}
  if(p==='admin/grade'){const s=db.subs.find(x=>x.id===b.id);if(!s)return send(res,404,{error:'Нет такого участника'});s.grades=s.grades||{};s.grades[b.pos]=b.val===1?1:0;save();return send(res,200,{ok:1})}
  send(res,404,{error:'Не найдено'})}
-http.createServer(async(req,res)=>{const u=new URL(req.url,'http://x');
+const srv=http.createServer(async(req,res)=>{const u=new URL(req.url,'http://x');
  try{if(u.pathname.startsWith('/api/'))return await api(req,res,u);
   let f=path.normalize(path.join(PUB,u.pathname==='/'?'index.html':u.pathname));if(!f.startsWith(PUB)||!fs.existsSync(f)||fs.statSync(f).isDirectory())f=path.join(PUB,'index.html');
   res.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(res)}
- catch(e){send(res,400,{error:e.message||'Ошибка'})}}).listen(cfg.port,()=>console.log('HOSPITAL RPM: http://localhost:'+cfg.port));
+ catch(e){send(res,400,{error:e.message||'Ошибка'})}});
+boot().then(()=>srv.listen(cfg.port,()=>console.log('HOSPITAL RPM: http://localhost:'+cfg.port+(REST?' (данные: Upstash)':' (данные: файлы)')))).catch(e=>{console.error('Не удалось загрузить данные:',e.message);process.exit(1)});
