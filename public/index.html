@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HOSPITAL RPM — Аттестация хирургов</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#0b0b0b;--panel:#141414;--line:#333;--gold:#f1f1f1;--tx:#ececec;--mu:#8d8d8d;--ok:#9fd3a8;--bad:#e08a8a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");color:var(--tx);font:15px/1.6 Inter,system-ui,sans-serif;min-height:100vh;filter:grayscale(.15)}
+h1,h2,h3,.logo,.big{font-family:Oswald,Impact,'Arial Narrow',sans-serif;font-weight:700;text-transform:uppercase;margin:0;letter-spacing:.01em}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px}
+.logo{font-size:15px;letter-spacing:.2em;border:1px solid var(--line);background:#00000088;padding:7px 16px;border-radius:999px}
+#who{font-size:13px;color:var(--mu);border:1px solid var(--line);border-radius:999px;padding:6px 14px}#who:empty{display:none}
+main{max-width:760px;margin:0 auto;padding:0 16px 70px}
+.hero{position:relative;border-radius:0 0 40px 40px;overflow:hidden;background:linear-gradient(#e4e4e4,#9a9a9a 70%,#555);padding:70px 20px 90px;text-align:center;color:#111;margin:0 -16px}
+.hero svg.mt{position:absolute;inset:0;width:100%;height:100%;opacity:.35;filter:blur(3px)}
+.hero .big{position:relative;font-size:clamp(54px,15vw,112px);line-height:.95;color:#0d0d0d}
+.hero .big sup{font-size:.22em;letter-spacing:.2em;vertical-align:top;margin:0 6px;font-weight:600}
+.hero .line{position:relative;width:62%;max-width:300px;height:5px;background:#0d0d0d;border-radius:4px;margin:6px auto 0}
+.skull{position:relative;z-index:2;width:104px;height:104px;border-radius:50%;background:#0b0b0b;box-shadow:0 0 0 12px var(--bg);margin:-52px auto 0;display:grid;place-items:center}
+.pills{display:flex;gap:14px;margin:26px 0 8px;flex-wrap:wrap}
+.pill1,.pill2{flex:1;min-width:220px;height:46px;border-radius:999px;border:1px solid #bbb;display:flex;align-items:center;justify-content:center;font-size:14px}
+.pill1{background:none;color:var(--tx);cursor:pointer;margin:0;letter-spacing:.05em;text-transform:none;font-weight:500}.pill1:hover{background:#ffffff14}
+.pill2{background:#f1f1f1;border-color:#f1f1f1;color:#0b0b0b;font-weight:600;letter-spacing:.04em}
+.stories{display:flex;justify-content:space-around;margin:44px 0 10px}.st{text-align:center;font-size:12px;color:var(--mu);width:90px}
+.st i{display:block;width:76px;height:76px;border-radius:50%;margin:0 auto 8px;border:3px solid #3b3b3b;background:radial-gradient(circle at 35% 30%,#777,#111 70%);display:grid;place-items:center;font:700 20px Oswald,sans-serif;color:#eee;font-style:normal}
+.card{background:#101010cc;border:1px solid var(--line);padding:30px;border-radius:22px;margin-top:30px}
+label{display:block;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--mu);margin:18px 0 6px}
+textarea{width:100%;background:#0b0b0b;border:1px solid var(--line);color:var(--tx);padding:14px 18px;font:inherit;border-radius:18px;resize:vertical}textarea:focus{outline:1px solid #ddd}
+input[type=text],input[type=password]{width:100%;background:#0b0b0b;border:1px solid var(--line);color:var(--tx);padding:12px 18px;font:inherit;border-radius:999px}
+input:focus{outline:1px solid #ddd}
+button{background:#f1f1f1;color:#0b0b0b;border:0;padding:13px 32px;font:600 12px Inter,sans-serif;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;border-radius:999px;margin-top:24px}
+button.ghost{background:none;border:1px solid var(--line);color:var(--tx)}button:disabled{opacity:.5;cursor:wait}
+.err{color:var(--bad);margin-top:14px;min-height:20px}.mu{color:var(--mu)}
+.opt{display:block;border:1px solid var(--line);padding:14px 18px;margin:10px 0;cursor:pointer;border-radius:16px;text-transform:none;letter-spacing:0;font-size:15px;color:var(--tx)}
+.opt:has(input:checked){border-color:#f1f1f1;background:#1d1d1d}.opt input{margin-right:10px;accent-color:#f1f1f1}
+.bar{display:flex;align-items:center;gap:12px;background:#222;border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:12px;color:#ccc;margin:30px 0 0}.bar b{flex:1;height:3px;background:#555;border-radius:3px;position:relative}.bar b i{position:absolute;left:0;top:0;bottom:0;background:#fff;border-radius:3px}
+table{width:100%;border-collapse:collapse;font-size:14px}th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);text-align:left}th,td{padding:10px 8px;border-bottom:1px solid var(--line)}tr.r{cursor:pointer}tr.r:hover{background:#1d1d1d}
+.pillx{padding:2px 10px;border:1px solid var(--line);font-size:12px;border-radius:999px}.ok{color:var(--ok)}.bad{color:var(--bad)}
+img.pass{max-width:100%;border:1px solid var(--line);border-radius:14px;margin:8px 0 18px}
+.plain{text-align:center;padding:60px 10px 10px}.plain h1{font-size:clamp(40px,9vw,72px);line-height:1}.plain p{color:var(--mu);max-width:520px;margin:18px auto}
+.act{position:sticky;bottom:0;padding:12px 0 4px;background:linear-gradient(#10101000,#101010 35%)}.act button{margin-top:0}
+footer{text-align:center;color:var(--mu);font-size:12px;padding:30px}footer a{color:var(--mu);cursor:pointer;text-decoration:underline}
+</style></head><body>
+<header><div class="logo">HOSPITAL RPM</div><span class="mu" id="who"></span></header>
+<main id="app"></main>
+<footer>© HOSPITAL RPM · Комиссия по аттестации · <a id="adm">Администрирование</a></footer>
+<script>
+const $=s=>document.querySelector(s),app=$('#app');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const errb=m=>{let b=document.getElementById('eb');if(!b){b=document.createElement('div');b.id='eb';b.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#4a1010;color:#fff;padding:8px 12px;border-radius:10px;font:12px monospace';document.body.appendChild(b)}b.textContent=m;setTimeout(()=>b.remove(),6000)};
+const api=async(p,b,adm)=>{const r=await fetch('/api/'+p,{method:b?'POST':'GET',headers:{'Content-Type':'application/json',...(adm?{'x-admin':AT}:{})},body:b?JSON.stringify(b):undefined});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('Ошибка '+r.status));return j};
+let AT=sessionStorage.getItem('adm')||'',S=null,tm=null,busy=false;
+const clock=l=>{l=Math.max(0,Math.ceil(l/1000));return String(Math.floor(l/60)).padStart(2,'0')+':'+String(l%60).padStart(2,'0')};
+function home(){app.innerHTML=`<div class="hero"><svg class="mt" viewBox="0 0 400 300" preserveAspectRatio="none"><polygon fill="#444" points="0,300 0,200 70,130 120,170 210,60 290,150 340,110 400,170 400,300"/></svg><div class="big"><sup>HOSPITAL RPM</sup>Аттес<wbr>тация<span>;</span></div><div class="line"></div><div style="position:relative;margin-top:14px;font:600 12px Inter,sans-serif;letter-spacing:.3em">ХИРУРГИЧЕСКИЙ СОСТАВ</div></div><div class="skull"><svg width="52" height="52" viewBox="0 0 11 11" shape-rendering="crispEdges" fill="#f1f1f1"><path d="M3 1h5v1h1v1h1v4H9v1H8v2H7V9H6v2H5V9H4v1H3V8H2V7H1V3h1V2h1zm1 4v2h1V5zm3 0v2h1V5z" fill-rule="evenodd"/></svg></div>
+<div class="pills"><button class="pill1" id="go">Приступить к регистрации →</button><div class="pill2">15 вопросов · 15 минут</div></div>
+<div class="stories"><div class="st"><i>01</i>Регистрация</div><div class="st"><i>02</i>Тестирование</div><div class="st"><i>03</i>Оценка комиссии</div></div>
+<p class="mu" style="text-align:center;font-size:13px">Для допуска необходим индивидуальный код. Каждый код действует один раз.</p>`;$('#go').onclick=register}
+
+
+function register(){app.innerHTML=`<div class="card"><h2>Регистрация кандидата</h2><p class="mu">Код действителен только для вашего никнейма и только один раз.</p>
+<label>Никнейм</label><input type="text" id="nick" maxlength="40">
+<label>Фотография паспорта (скриншот с сервера)</label><input type="file" id="ph" accept="image/*" style="color:var(--mu)">
+<label>Индивидуальный код</label><input type="password" id="code" autocomplete="off" maxlength="64">
+<div class="err" id="e"></div><button id="sub">Подтвердить и начать</button></div>`;
+$('#sub').onclick=async()=>{const e=$('#e'),b=$('#sub');e.textContent='';const nick=$('#nick').value.trim(),f=$('#ph').files[0],code=$('#code').value.trim();
+if(!nick||!f||!code){e.textContent='Заполните все поля и приложите фотографию.';return}
+b.disabled=true;try{const photo=await shrink(f);S=await api('register',{nick,code,photo});localStorage.setItem('att',S.token);test()}catch(x){e.textContent=x.message;b.disabled=false}}}
+function shrink(f){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1400/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.82))};im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=URL.createObjectURL(f)})}
+function finish(status){localStorage.removeItem('att');$('#who').textContent='';app.innerHTML=`<div class="plain"><h1>${status==='timeout'?'Время вышло;':'Благодарим за участие;'}</h1><p>${status==='timeout'?'Отведённое время истекло. Тест отправлен на том этапе, где вы остановились; неотвеченные вопросы оцениваются в 0 баллов. ':''}Ваши ответы переданы Комиссии по аттестации. Результаты будут объявлены дополнительно.</p></div>`}
+function test(){clearInterval(tm);busy=false;if(S.status!=='in_progress')return finish(S.status);$('#who').textContent=S.nick;
+const off=S.now-Date.now(),left=()=>S.deadline-(Date.now()+off),N=S.total;
+app.innerHTML=`<div class="bar"><span>❚❚</span><span>${S.i+1}/${N}</span><b><i style="width:${S.i/N*100}%"></i></b><span id="tl"></span></div><div class="card" style="margin-top:14px"><div class="mu">Вопрос ${S.i+1} из ${N}</div><h2 style="margin:8px 0 16px;font-size:18px;text-transform:none;font-weight:600;line-height:1.4">${esc(S.question)}</h2><textarea id="ans" rows="5" placeholder="Ваш письменный ответ…"></textarea><div class="err" id="e"></div><div class="act"><button id="nx">Ответить</button> <button class="ghost" id="sk">Пропустить</button></div><p class="mu" style="font-size:12px;margin-bottom:0">Пропущенный вопрос оценивается в 0 баллов. Вернуться к вопросу нельзя. По истечении времени тест отправляется автоматически.</p></div>`;
+const tick=()=>{const l=left(),el=$('#tl');if(el){el.textContent=clock(l);el.style.color=l<60000?'var(--bad)':''}
+ if(l<=0){clearInterval(tm);const t=($('#ans')||{}).value||'';api('finish',{token:S.token,text:t}).catch(()=>{});finish('timeout')}};
+tick();tm=setInterval(tick,1000);
+const step=async(text,skip)=>{if(busy)return;busy=true;try{S=await api('answer',{token:S.token,text,skip});test()}catch(x){busy=false;$('#e').textContent=x.message}};
+$('#nx').onclick=()=>{const t=$('#ans').value.trim();if(!t){$('#e').textContent='Введите ответ или нажмите «Пропустить».';return}step(t,false)};
+$('#sk').onclick=()=>step('',true)}
+$('#adm').onclick=()=>{if(AT)return panel();app.innerHTML=`<div class="card"><h2>Администрирование</h2><label>Код администратора</label><input type="password" id="ac"><div class="err" id="e"></div><button id="ok">Войти</button> <button class="ghost" id="bk">Назад</button></div>`;
+$('#bk').onclick=start;$('#ok').onclick=async()=>{try{AT=(await api('admin/login',{code:$('#ac').value.trim()})).token;sessionStorage.setItem('adm',AT);panel()}catch(x){$('#e').textContent=x.message}}};
+let MSG='';
+async function panel(){app.innerHTML='<p class="mu">Загрузка…</p>';let D;try{D=await api('admin/data',null,true)}catch(x){AT='';sessionStorage.removeItem('adm');app.innerHTML='<div class="card">Сессия администратора истекла. Войдите снова.</div>';return}
+const {codes:CL,subs:E}=D,pos=(s,k)=>s.answers['p'+k],gr=s=>s.grades||{},sc=s=>s.qs.reduce((n,_,i)=>n+((pos(s,i+1)&&gr(s)[i+1]===1)?1:0),0);
+const fmt=t=>t?new Date(t).toLocaleString('ru-RU'):'—',stl={completed:'завершил',timeout:'время вышло',in_progress:'в процессе'};
+const row=(d,i)=>`<tr class="r" data-i="${i}"><td>№${d.n}</td><td>${esc(d.nick)}</td><td><span class="pillx">${stl[d.status]||d.status}</span></td><td>${sc(d)} / ${d.qs.length}</td><td>${fmt(d.started)}</td></tr>`;
+app.innerHTML=`<div class="plain" style="padding-top:20px;text-align:left"><h1 style="font-size:44px">Коды допуска</h1></div><div class="card" style="margin-top:10px"><p class="mu" style="margin-top:0">Каждый код привязан к никнейму и работает один раз. Одна строка — один игрок: <b>Никнейм</b> (код создастся сам) или <b>Никнейм ; ваш_код</b> (свой код, от 6 символов).</p><textarea id="nl" rows="4" placeholder="Artem_Volkov&#10;Ivan_Morozov ; MyCode-2026"></textarea><div class="err" id="me">${esc(MSG)}</div><button id="mk">Создать коды</button> <button class="ghost" id="cp">Скачать список кодов</button><div style="overflow-x:auto;margin-top:18px"><table><tr><th>№</th><th>Никнейм</th><th>Код</th><th>Статус</th><th></th></tr>${CL.map(c=>`<tr><td>${c.n}</td><td>${esc(c.nick)}</td><td style="font-family:monospace;user-select:all">${esc(c.code)}</td><td>${c.used?'<span class="bad">использован</span>':'<span class="ok">свободен</span>'}</td><td><button class="ghost dc" data-id="${c.id}" style="margin:0;padding:6px 14px">Удалить</button></td></tr>`).join('')||'<tr><td colspan=5 class="mu">Кодов пока нет.</td></tr>'}</table></div></div>
+<div class="plain" style="padding-top:30px;text-align:left"><h1 style="font-size:44px">Архив аттестации</h1></div><p class="mu">Всего участников: ${E.length}. Откройте участника, чтобы оценить письменные ответы (1 балл за верный).</p>
+<div class="card" style="padding:12px;overflow-x:auto;margin-top:10px"><table id="tb"><tr><th>Код</th><th>Никнейм</th><th>Статус</th><th>Балл</th><th>Начало</th></tr>${E.map(row).join('')||'<tr><td colspan=5 class="mu">Пока нет участников.</td></tr>'}</table></div>
+<button id="ex">Скачать архив (JSON)</button> <button class="ghost" id="lo">Выйти</button><div id="det"></div>`;MSG='';
+const dlf=(name,text)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));a.download=name;a.click()};
+$('#lo').onclick=()=>{AT='';sessionStorage.removeItem('adm');start()};
+$('#cp').onclick=()=>dlf('codes.txt',CL.map(c=>c.n+'\t'+c.nick+'\t'+c.code).join('\n'));
+$('#ex').onclick=()=>dlf('attestation-archive.json',JSON.stringify(E.map(d=>({...d,балл:sc(d),вопросы:d.qs.map((q,i)=>({вопрос:q,ответ:pos(d,i+1)||null}))})),null,2));
+$('#mk').onclick=async()=>{const b=$('#mk');b.disabled=true;try{const r=await api('admin/codes',{text:$('#nl').value},true);MSG=(r.added.length?'Создано кодов: '+r.added.length+'. ':'')+(r.skipped.length?'Пропущено: '+r.skipped.join('; '):'')}catch(x){MSG=x.message}panel()};
+document.querySelectorAll('.dc').forEach(b=>b.onclick=async()=>{if(b.dataset.s!=='1'){b.dataset.s='1';b.textContent='Точно?';return}b.disabled=true;try{await api('admin/code-delete',{id:b.dataset.id},true)}catch(x){}panel()});
+const open=i=>{const d=E[i],g=gr(d);d.grades=g;$('#det').innerHTML=`<div class="card"><h3 style="font-size:26px">${esc(d.nick)} · код №${d.n}</h3><p class="mu">Начало: ${fmt(d.started)} · Завершение: ${fmt(d.finished)} · Итого: <b id="tot">${sc(d)}</b> из ${d.qs.length}</p><img class="pass" src="/api/admin/photo/${d.id}?t=${AT}" alt="Паспорт">${d.qs.map((q,k)=>{const a=pos(d,k+1);return `<div style="border-top:1px solid var(--line);padding:14px 0"><b>${k+1}. ${esc(q)}</b><p style="white-space:pre-wrap;margin:8px 0">${a?esc(a):'<span class="bad">'+(d.skipped.includes(k+1)?'Пропущен — 0 баллов':'Нет ответа — 0 баллов')+'</span>'}</p>${a?`<button class="ghost g" data-k="${k+1}" data-v="1" style="margin:0 6px 0 0;padding:8px 18px${g[k+1]===1?';background:#f1f1f1;color:#0b0b0b':''}">1 балл</button><button class="ghost g" data-k="${k+1}" data-v="0" style="margin:0;padding:8px 18px${g[k+1]===0?';background:#555':''}">0 баллов</button>`:''}</div>`}).join('')}</div>`;
+document.querySelectorAll('.g').forEach(b=>b.onclick=async()=>{document.querySelectorAll('.g').forEach(x=>x.disabled=true);try{await api('admin/grade',{id:d.id,pos:b.dataset.k,val:+b.dataset.v},true);d.grades[b.dataset.k]=+b.dataset.v}catch(x){errb('Не удалось сохранить оценку: '+x.message)}open(i);const t=document.createElement('tbody');t.innerHTML=row(d,i);const nr=t.firstElementChild;$('#tb').rows[+i+1].replaceWith(nr);nr.onclick=()=>open(i)});
+$('#det').scrollIntoView({behavior:'smooth'})};
+document.querySelectorAll('tr.r').forEach(r=>r.onclick=()=>open(+r.dataset.i))}
+async function start(){const t=localStorage.getItem('att');if(!t){home();return}try{S=await api('state?token='+encodeURIComponent(t));S.token=t;test()}catch(e){localStorage.removeItem('att');home()}}
+start();
+</script></body></html>

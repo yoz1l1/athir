@@ -1,0 +1,6 @@
+{
+ "port": 3000,
+ "adminCode": "",
+ "testMinutes": 15,
+ "questionsPerTest": 15
+}
