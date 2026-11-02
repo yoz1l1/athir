@@ -54,7 +54,7 @@ async function api(req,res,u){const p=u.pathname.slice(5);
  if(req.method==='GET'&&p==='state'){const s=db.subs.find(x=>x.id===u.searchParams.get('token'));return s?send(res,200,stateOf(s)):send(res,404,{error:'Сессия не найдена'})}
  if(req.method==='GET'&&p.startsWith('admin/photo/')){if(!isAdmin(req,u))return send(res,401,{error:'Нет доступа'});const id=p.slice(12).replace(/[^a-f0-9]/g,''),buf=await getPhoto(id);if(!buf)return send(res,404,{error:'Нет фото'});res.writeHead(200,{'Content-Type':'image/jpeg'});return res.end(buf)}
  if(req.method==='GET'&&p==='admin/data'){if(!isAdmin(req,u))return send(res,401,{error:'Нет доступа'});db.subs.forEach(expire);
-  return send(res,200,{codes:db.codes.map(c=>({id:c.id,n:c.n,nick:c.nick,code:c.code,used:!!c.used,usedAt:c.usedAt})),subs:db.subs.map(s=>({id:s.id,n:s.n,nick:s.nick,status:s.status,started:s.started,finished:s.finished,answers:s.answers,skipped:s.skipped,grades:s.grades,qs:s.qs.map(i=>Q[i])})).sort((a,b)=>b.started-a.started)})}
+  return send(res,200,{codes:db.codes.map(c=>({id:c.id,n:c.n,nick:c.nick,code:c.code,used:!!c.used,usedAt:c.usedAt})),subs:db.subs.map(s=>({id:s.id,n:s.n,nick:s.nick,code:s.code||((db.codes.find(c=>c.id===s.codeId)||{}).code)||'',status:s.status,started:s.started,finished:s.finished,answers:s.answers,skipped:s.skipped,grades:s.grades,qs:s.qs.map(i=>Q[i])})).sort((a,b)=>b.started-a.started)})}
  if(req.method!=='POST')return send(res,404,{error:'Не найдено'});
  const b=await body(req);
  if(p==='register'){if(limited(req,'reg',12))return send(res,429,{error:'Слишком много попыток. Подождите несколько минут.'});
@@ -64,7 +64,7 @@ async function api(req,res,u){const p=u.pathname.slice(5);
   if(c.used)return send(res,400,{error:'Код уже был использован и больше недействителен.'});
   const id=rid();c.used=true;c.usedAt=Date.now();
   try{await putPhoto(id,photo)}catch(e){c.used=false;delete c.usedAt;return send(res,500,{error:'Не удалось сохранить фото.'})}
-  const now=Date.now(),s={id,n:c.n,codeId:c.id,nick,norm:norm(nick),status:'in_progress',started:now,deadline:now+TL,qs:c.qs,i:0,answers:{},skipped:[],grades:{}};db.subs.push(s);save();return send(res,200,stateOf(s))}
+  const now=Date.now(),s={id,n:c.n,codeId:c.id,code:c.code,nick,norm:norm(nick),status:'in_progress',started:now,deadline:now+TL,qs:c.qs,i:0,answers:{},skipped:[],grades:{}};db.subs.push(s);save();return send(res,200,stateOf(s))}
  if(p==='answer'||p==='finish'){const s=db.subs.find(x=>x.id===b.token);if(!s)return send(res,404,{error:'Сессия не найдена'});expire(s);
   if(s.status==='in_progress'){const t=String(b.text||'').trim().slice(0,6000);
    if(p==='answer'){if(b.skip)s.skipped.push(s.i+1);else if(t)s.answers['p'+(s.i+1)]=t;else return send(res,400,{error:'Введите ответ или нажмите «Пропустить».'});s.i++;if(s.i>=s.qs.length){s.status='completed';s.finished=Date.now()}}
@@ -79,6 +79,9 @@ async function api(req,res,u){const p=u.pathname.slice(5);
    if(!code)code=gen();if(db.codes.some(c=>c.norm===norm(nick)&&c.code===code))continue;
    const n=db.codes.reduce((m,c)=>Math.max(m,c.n||0),0)+1;const c={id:rid(),n,nick,norm:norm(nick),code,qs:pickVariant(),created:Date.now()};db.codes.push(c);added.push({n,nick,code})}
   save();return send(res,200,{added,skipped})}
+ if(p==='admin/sub-delete'){const id=String(b.id||'').replace(/[^a-f0-9]/g,'');if(!db.subs.some(x=>x.id===id))return send(res,404,{error:'Нет такого участника'});db.subs=db.subs.filter(x=>x.id!==id);lastSubs.delete(id);
+  try{if(REST)await rc([['DEL','hrpm:sub:'+id],['DEL','hrpm:photo:'+id],['SREM','hrpm:subs',id]]);else{const f=path.join(PHOTOS,id+'.jpg');if(fs.existsSync(f))fs.unlinkSync(f)}}catch(e){return send(res,500,{error:'Не удалось удалить: '+e.message})}
+  save();return send(res,200,{ok:1})}
  if(p==='admin/code-delete'){db.codes=db.codes.filter(c=>c.id!==b.id);save();return send(res,200,{ok:1})}
  if(p==='admin/grade'){const s=db.subs.find(x=>x.id===b.id);if(!s)return send(res,404,{error:'Нет такого участника'});s.grades=s.grades||{};s.grades[b.pos]=b.val===1?1:0;save();return send(res,200,{ok:1})}
  send(res,404,{error:'Не найдено'})}
