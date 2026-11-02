@@ -41,7 +41,7 @@ function pickVariant(){const use=Q.map(()=>0);db.codes.forEach(c=>(c.qs||[]).for
  const k=Math.min(cfg.questionsPerTest,Q.length),ord=Q.map((_,i)=>i).sort((a,b)=>use[a]-use[b]||crypto.randomInt(3)-1);
  const qs=ord.slice(0,k);for(let i=qs.length-1;i>0;i--){const j=crypto.randomInt(i+1);[qs[i],qs[j]]=[qs[j],qs[i]]}return qs}
 function expire(s){if(s.status==='in_progress'&&Date.now()>s.deadline+GRACE){s.status='timeout';s.finished=s.deadline;save()}}
-const stateOf=s=>{expire(s);return{token:s.id,nick:s.nick,status:s.status,i:s.i,total:s.qs.length,deadline:s.deadline,now:Date.now(),question:s.status==='in_progress'?Q[s.qs[s.i]]:null}};
+const stateOf=s=>{expire(s);return{token:s.id,nick:s.nick,status:s.status,i:s.i,total:s.qs.length,deadline:s.deadline,now:Date.now(),question:s.status==='in_progress'?Q[s.qs[s.i]]:null,answer:s.status==='in_progress'?(s.answers['p'+(s.i+1)]||''):'',marks:s.qs.map((_,k)=>s.answers['p'+(k+1)]?'a':s.skipped.includes(k+1)?'s':'n')}};
 // --- ограничение частоты ---
 const hits=new Map();const limited=(req,key,max)=>{const ip=(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim(),k=key+ip,now=Date.now();let h=hits.get(k);if(!h||h.r<now)h={n:0,r:now+300000};h.n++;hits.set(k,h);return h.n>max};
 // --- админ-сессии ---
@@ -49,7 +49,7 @@ const atok=new Map();const hash=s=>crypto.createHash('sha256').update(String(s))
 const isAdmin=(req,u)=>{const t=req.headers['x-admin']||u.searchParams.get('t');const e=atok.get(t);return !!e&&e>Date.now()};
 const send=(res,code,obj)=>{res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(obj))};
 const body=req=>new Promise((ok,no)=>{let b='',n=0;req.on('data',c=>{n+=c.length;if(n>9e6){no(new Error('Слишком большой файл'));req.destroy()}else b+=c});req.on('end',()=>{try{ok(b?JSON.parse(b):{})}catch(e){no(new Error('Неверный запрос'))}});req.on('error',no)});
-const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.ico':'image/x-icon','.svg':'image/svg+xml'};
+const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.ico':'image/x-icon','.svg':'image/svg+xml','.woff2':'font/woff2'};
 async function api(req,res,u){const p=u.pathname.slice(5);
  if(req.method==='GET'&&p==='state'){const s=db.subs.find(x=>x.id===u.searchParams.get('token'));return s?send(res,200,stateOf(s)):send(res,404,{error:'Сессия не найдена'})}
  if(req.method==='GET'&&p.startsWith('admin/photo/')){if(!isAdmin(req,u))return send(res,401,{error:'Нет доступа'});const id=p.slice(12).replace(/[^a-f0-9]/g,''),buf=await getPhoto(id);if(!buf)return send(res,404,{error:'Нет фото'});res.writeHead(200,{'Content-Type':'image/jpeg'});return res.end(buf)}
@@ -67,7 +67,13 @@ async function api(req,res,u){const p=u.pathname.slice(5);
   const now=Date.now(),s={id,n:c.n,codeId:c.id,code:c.code,nick,norm:norm(nick),status:'in_progress',started:now,deadline:now+TL,qs:c.qs,i:0,answers:{},skipped:[],grades:{}};db.subs.push(s);save();return send(res,200,stateOf(s))}
  if(p==='answer'||p==='finish'){const s=db.subs.find(x=>x.id===b.token);if(!s)return send(res,404,{error:'Сессия не найдена'});expire(s);
   if(s.status==='in_progress'){const t=String(b.text||'').trim().slice(0,6000);
-   if(p==='answer'){if(b.skip)s.skipped.push(s.i+1);else if(t)s.answers['p'+(s.i+1)]=t;else return send(res,400,{error:'Введите ответ или нажмите «Пропустить».'});s.i++;if(s.i>=s.qs.length){s.status='completed';s.finished=Date.now()}}
+   if(p==='answer'){const pos=s.i+1,k='p'+pos;
+    if(b.skip){delete s.answers[k];if(!s.skipped.includes(pos))s.skipped.push(pos)}
+    else if(t){s.answers[k]=t;s.skipped=s.skipped.filter(x=>x!==pos)}
+    else if(b.draft){delete s.answers[k]}
+    else return send(res,400,{error:'Введите ответ или нажмите «Пропустить».'});
+    const to=Number.isInteger(b.to)?b.to:s.i+1;
+    if(b.finish||to>=s.qs.length){s.status='completed';s.finished=Date.now()}else s.i=Math.max(0,to)}
    else{if(t&&Date.now()<=s.deadline+GRACE)s.answers['p'+(s.i+1)]=t;s.status='timeout';s.finished=Date.now()}save()}
   return send(res,200,stateOf(s))}
  if(p==='admin/login'){if(limited(req,'adm',10))return send(res,429,{error:'Слишком много попыток.'});const ok=crypto.timingSafeEqual(hash(b.code),hash(cfg.adminCode));if(!ok)return send(res,401,{error:'Неверный код.'});const t=rid();atok.set(t,Date.now()+12*3600000);return send(res,200,{token:t})}

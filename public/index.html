@@ -2,8 +2,11 @@
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HOSPITAL RPM — Аттестация хирургов</title>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+@font-face{font-family:Oswald;font-weight:700;font-display:swap;src:url(/fonts/oswald-cyrillic-700-normal.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Oswald;font-weight:700;font-display:swap;src:url(/fonts/oswald-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 0}.chip{margin:0;padding:0;width:32px;height:32px;border-radius:50%;font:600 12px Inter,system-ui,sans-serif;letter-spacing:0;text-transform:none;background:none;color:var(--mu);border:1px solid var(--line)}.chip.a{background:#f1f1f1;color:#0b0b0b;border-color:#f1f1f1}.chip.s{border-style:dashed;color:#ccc}.chip.cur{outline:2px solid #fff;outline-offset:2px}
+
 :root{color-scheme:dark;--bg:#0b0b0b;--panel:#141414;--line:#333;--gold:#f1f1f1;--tx:#ececec;--mu:#8d8d8d;--ok:#9fd3a8;--bad:#e08a8a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");color:var(--tx);font:15px/1.6 Inter,system-ui,sans-serif;min-height:100vh;filter:grayscale(.15)}
@@ -74,14 +77,21 @@ b.disabled=true;try{const photo=await shrink(f);S=await api('register',{nick,cod
 function shrink(f){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1400/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.82))};im.onerror=()=>rej(new Error('Не удалось прочитать изображение'));im.src=URL.createObjectURL(f)})}
 function finish(status){localStorage.removeItem('att');$('#who').textContent='';app.innerHTML=`<div class="plain"><h1>${status==='timeout'?'Время вышло;':'Благодарим за участие;'}</h1><p>${status==='timeout'?'Отведённое время истекло. Тест отправлен на том этапе, где вы остановились; неотвеченные вопросы оцениваются в 0 баллов. ':''}Ваши ответы переданы Комиссии по аттестации. Результаты будут объявлены дополнительно.</p></div>`}
 function test(){clearInterval(tm);busy=false;if(S.status!=='in_progress')return finish(S.status);$('#who').textContent=S.nick;
-const off=S.now-Date.now(),left=()=>S.deadline-(Date.now()+off),N=S.total;
-app.innerHTML=`<div class="bar"><span>❚❚</span><span>${S.i+1}/${N}</span><b><i style="width:${S.i/N*100}%"></i></b><span id="tl"></span></div><div class="card" style="margin-top:14px"><div class="mu">Вопрос ${S.i+1} из ${N}</div><h2 style="margin:8px 0 16px;font-size:18px;text-transform:none;font-weight:600;line-height:1.4">${esc(S.question)}</h2><textarea id="ans" rows="5" placeholder="Ваш письменный ответ…"></textarea><div class="err" id="e"></div><div class="act"><button id="nx">Ответить</button> <button class="ghost" id="sk">Пропустить</button></div><p class="mu" style="font-size:12px;margin-bottom:0">Пропущенный вопрос оценивается в 0 баллов. Вернуться к вопросу нельзя. По истечении времени тест отправляется автоматически.</p></div>`;
+const off=S.now-Date.now(),left=()=>S.deadline-(Date.now()+off),N=S.total,last=S.i===N-1;let confirmed=false;
+app.innerHTML=`<div class="bar"><span>❚❚</span><span>${S.i+1}/${N}</span><b><i style="width:${S.marks.filter(m=>m==='a').length/N*100}%"></i></b><span id="tl"></span></div><div class="chips">${S.marks.map((m,k)=>`<button class="chip ${m}${k===S.i?' cur':''}" data-k="${k}" title="Вопрос ${k+1}">${k+1}</button>`).join('')}</div><div class="card" style="margin-top:14px"><div class="mu">Вопрос ${S.i+1} из ${N}</div><h2 style="margin:8px 0 16px;font-size:18px;text-transform:none;font-weight:600;line-height:1.4">${esc(S.question)}</h2><textarea id="ans" rows="5" placeholder="Ваш письменный ответ…"></textarea><div class="err" id="e"></div><div class="act"><button class="ghost" id="bk"${S.i?'':' disabled'}>← Назад</button> <button id="nx">${last?'Завершить':'Ответить'}</button> <button class="ghost" id="sk">Пропустить</button></div><p class="mu" style="font-size:12px;margin-bottom:0">Вы можете вернуться к любому вопросу кнопкой «Назад» или номером вопроса. Вопрос без ответа или пропущенный оценивается в 0 баллов. По истечении времени тест отправляется автоматически.</p></div>`;
+$('#ans').value=S.answer||'';
 const tick=()=>{const l=left(),el=$('#tl');if(el){el.textContent=clock(l);el.style.color=l<60000?'var(--bad)':''}
  if(l<=0){clearInterval(tm);const t=($('#ans')||{}).value||'';api('finish',{token:S.token,text:t}).catch(()=>{});finish('timeout')}};
 tick();tm=setInterval(tick,1000);
-const step=async(text,skip)=>{if(busy)return;busy=true;try{S=await api('answer',{token:S.token,text,skip});test()}catch(x){busy=false;$('#e').textContent=x.message}};
-$('#nx').onclick=()=>{const t=$('#ans').value.trim();if(!t){$('#e').textContent='Введите ответ или нажмите «Пропустить».';return}step(t,false)};
-$('#sk').onclick=()=>step('',true)}
+const go=async o=>{if(busy)return;busy=true;try{S=await api('answer',{token:S.token,...o});test()}catch(x){busy=false;$('#e').textContent=x.message}};
+const tryFinish=o=>{const missing=S.marks.filter((m,k)=>k!==S.i&&m!=='a').length+((o.skip||!o.text)?1:0);
+ if(missing>0&&!confirmed){confirmed=true;$('#e').textContent='Неотвеченных или пропущенных вопросов: '+missing+'. Вернитесь к ним или нажмите ещё раз, чтобы завершить тест.';return}
+ go({...o,finish:true,draft:!o.text&&!o.skip})};
+const txt=()=>$('#ans').value.trim();
+$('#nx').onclick=()=>{const t=txt();if(last)return tryFinish({text:t});if(!t){$('#e').textContent='Введите ответ или нажмите «Пропустить».';return}go({text:t,to:S.i+1})};
+$('#sk').onclick=()=>last?tryFinish({skip:true}):go({skip:true,to:S.i+1});
+$('#bk').onclick=()=>go({text:txt(),draft:true,to:S.i-1});
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{const k=+c.dataset.k;if(k!==S.i)go({text:txt(),draft:true,to:k})})}
 $('#adm').onclick=()=>{if(AT)return panel();app.innerHTML=`<div class="card"><h2>Администрирование</h2><label>Код администратора</label><input type="password" id="ac"><div class="err" id="e"></div><button id="ok">Войти</button> <button class="ghost" id="bk">Назад</button></div>`;
 $('#bk').onclick=start;$('#ok').onclick=async()=>{try{AT=(await api('admin/login',{code:$('#ac').value.trim()})).token;sessionStorage.setItem('adm',AT);panel()}catch(x){$('#e').textContent=x.message}}};
 let MSG='';
